@@ -5,6 +5,7 @@ require("dotenv").config();
 
 // Import des routes
 const authRoutes = require("./routes/authRoutes");
+const employeeRoutes = require("./routes/employeeRoutes");
 
 const app = express(); 
 
@@ -18,6 +19,7 @@ app.get("/", (req, res) => {
 }); 
 
 app.use("/api/auth", authRoutes); 
+app.use("/api/employees", employeeRoutes);
 
 // 3. Connexion BDD et Lancement du serveur
 const PORT = process.env.PORT || 5000;
