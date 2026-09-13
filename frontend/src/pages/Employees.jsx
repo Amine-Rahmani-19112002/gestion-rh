@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { 
-  LayoutDashboard, Users, Building2, CalendarX, FileText, 
-  Award, Folder, Settings, Search, Bell, LogOut, Plus, 
-  Trash2, Edit, X, Mail, Phone
+import {  useNavigate } from "react-router-dom";
+import {  Plus, 
+Trash2, Edit, X, Mail, Phone
 } from "lucide-react";
 import api from "../api/axios";
 
@@ -131,93 +129,9 @@ function Employees() {
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] font-sans text-slate-800">
       
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between p-6 shrink-0">
-        <div>
-          <div className="flex items-center gap-3 px-2 mb-8">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-blue-500/20">
-              S
-            </div>
-            <span className="text-xl font-extrabold tracking-tight text-slate-900">
-              Stratos<span className="text-blue-600">HR</span>
-            </span>
-          </div>
-
-          <nav className="space-y-1.5">
-            <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition-all">
-              <LayoutDashboard className="w-5 h-5" />
-              <span>Dashboard</span>
-            </Link>
-            <Link to="/employees" className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-sm transition-all">
-              <Users className="w-5 h-5" />
-              <span>Employees</span>
-            </Link>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition-all">
-              <Building2 className="w-5 h-5" />
-              <span>Departments</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition-all">
-              <CalendarX className="w-5 h-5" />
-              <span>Leaves & Absences</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition-all">
-              <FileText className="w-5 h-5" />
-              <span>Contracts</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition-all">
-              <Award className="w-5 h-5" />
-              <span>Evaluations</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition-all">
-              <Folder className="w-5 h-5" />
-              <span>Documents</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold transition-all">
-              <Settings className="w-5 h-5" />
-              <span>Settings</span>
-            </a>
-          </nav>
-        </div>
-
-        <div className="bg-[#0A1628] text-white p-5 rounded-2xl">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Support</p>
-          <p className="text-xs text-slate-300 leading-relaxed">Need help with the platform? Contact support.</p>
-        </div>
-      </aside>
-
+      
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <header className="h-20 bg-white border-b border-slate-200/80 px-8 flex items-center justify-between gap-4 sticky top-0 z-10">
-          <div className="relative w-96">
-            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              placeholder="Rechercher par nom, matricule, département..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-2.5 bg-slate-100/80 border border-transparent rounded-xl text-sm font-medium focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button className="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 relative">
-              <Bell className="w-5 h-5" />
-            </button>
-            <div className="h-8 w-px bg-slate-200"></div>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-800 text-white rounded-full flex items-center justify-center font-bold">
-                {user.name?.charAt(0).toUpperCase() || "A"}
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-sm font-bold text-slate-900 leading-tight">{user.name || "User"}</p>
-                <p className="text-xs text-slate-500 capitalize">{user.role}</p>
-              </div>
-            </div>
-            <button onClick={handleLogout} className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all border border-red-100">
-              <LogOut className="w-5 h-5" />
-            </button>
-          </div>
-        </header>
 
         <main className="p-8 space-y-6 max-w-[1600px]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
