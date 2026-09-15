@@ -1,27 +1,164 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, Users, Building2, CalendarX, FileText, 
-  Award, Folder, Settings, X 
+  Award, Folder, Settings, X, Fingerprint, LogOut, MapPin, Wifi, 
+  AlertTriangle, CheckCircle, Clock
 } from "lucide-react";
+import api from "../api/axios";
+import useIdleTimeout from "../hooks/useIdleTimeout";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { label: "Employees", path: "/employees", icon: Users },
-  { label: "Leaves & Absences", path: "/leaves", icon: CalendarX },
+  { label: "Leave", path: "/leaves", icon: CalendarX },
+  { label: "Delays & Absences", path: "/absences", icon: CalendarX },
   { label: "Departments", path: "/departments", icon: Building2 },
   { label: "Contracts", path: "/contracts", icon: FileText },
   { label: "Evaluations", path: "/evaluations", icon: Award },
   { label: "Documents", path: "/documents", icon: Folder },
   { label: "Settings", path: "/settings", icon: Settings },
+  
 ];
+
+// Couleurs selon le statut du pointage
+const statusConfig = {
+  "Non pointé": { color: "text-slate-400", bg: "bg-slate-100", dot: "bg-slate-400", label: "Non pointé" },
+  "En ligne": { color: "text-emerald-600", bg: "bg-emerald-50", dot: "bg-emerald-500", label: "En ligne" },
+  "Inactif": { color: "text-amber-600", bg: "bg-amber-50", dot: "bg-amber-500", label: "Inactif" },
+  "Terminé": { color: "text-slate-500", bg: "bg-slate-100", dot: "bg-slate-400", label: "Terminé" },
+  "Anomalie": { color: "text-rose-600", bg: "bg-rose-50", dot: "bg-rose-500", label: "Anomalie" },
+};
 
 export default function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
+  const [pointage, setPointage] = useState(null);
+  const [loadingPointage, setLoadingPointage] = useState(false);
+  const [geoError, setGeoError] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Horloge en temps réel
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Récupérer le pointage du jour au chargement
+  useEffect(() => {
+    fetchPointage();
+  }, []);
+
+  const fetchPointage = async () => {
+    try {
+      const res = await api.get("/pointage/me");
+      setPointage(res.data);
+    } catch (err) {
+      console.error("Erreur récupération pointage:", err);
+    }
+  };
+
+  // Callback appelé quand l'utilisateur est inactif (15 minutes)
+  const handleIdle = useCallback(async () => {
+    if (pointage && pointage.status === "En ligne") {
+      try {
+        await api.post("/pointage/status", { status: "Inactif" });
+        fetchPointage();
+      } catch (err) {
+        console.error("Erreur mise à jour statut inactif:", err);
+      }
+    }
+  }, [pointage]);
+
+  // Callback appelé quand l'utilisateur redevient actif
+  const isIdle = useIdleTimeout(handleIdle, 15 * 60 * 1000); // 15 minutes
+
+  // Quand l'utilisateur redevient actif après une période d'inactivité
+  useEffect(() => {
+    if (!isIdle && pointage && pointage.status === "Inactif") {
+      const reactivate = async () => {
+        try {
+          await api.post("/pointage/status", { status: "En ligne" });
+          fetchPointage();
+        } catch (err) {
+          console.error("Erreur réactivation:", err);
+        }
+      };
+      reactivate();
+    }
+  }, [isIdle]);
+
+  // Géolocalisation + Clock In
+  const handleClockIn = async () => {
+    setLoadingPointage(true);
+    setGeoError(null);
+
+    // Demander la géolocalisation
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const res = await api.post("/pointage/clock-in", {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+            setPointage(res.data);
+          } catch (err) {
+            setGeoError(err.response?.data?.message || "Erreur lors du pointage.");
+          } finally {
+            setLoadingPointage(false);
+          }
+        },
+        async (error) => {
+          // Si la géolocalisation est refusée, on pointe quand même mais sans coordonnées
+          // Le backend marquera comme "Anomalie"
+          console.warn("Géolocalisation refusée:", error.message);
+          try {
+            const res = await api.post("/pointage/clock-in", {});
+            setPointage(res.data);
+            setGeoError("Géolocalisation refusée — pointage enregistré avec anomalie.");
+          } catch (err) {
+            setGeoError(err.response?.data?.message || "Erreur lors du pointage.");
+          } finally {
+            setLoadingPointage(false);
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      // Navigateur sans support géolocalisation
+      try {
+        const res = await api.post("/pointage/clock-in", {});
+        setPointage(res.data);
+        setGeoError("Navigateur sans géolocalisation — anomalie enregistrée.");
+      } catch (err) {
+        setGeoError(err.response?.data?.message || "Erreur lors du pointage.");
+      } finally {
+        setLoadingPointage(false);
+      }
+    }
+  };
+
+  const handleClockOut = async () => {
+    setLoadingPointage(true);
+    try {
+      const res = await api.post("/pointage/clock-out");
+      setPointage(res.data);
+    } catch (err) {
+      setGeoError(err.response?.data?.message || "Erreur lors du pointage de départ.");
+    } finally {
+      setLoadingPointage(false);
+    }
+  };
+
+  const currentStatus = pointage?.status || "Non pointé";
+  const config = statusConfig[currentStatus] || statusConfig["Non pointé"];
+
+  const formatTime = (date) => {
+    return new Date(date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  };
 
   return (
     <>
-      {/* Overlay Sombre pour Mobile */}
       {isOpen && (
         <div 
           onClick={onClose}
@@ -29,14 +166,12 @@ export default function Sidebar({ isOpen, onClose }) {
         />
       )}
 
-      {/* Sidebar Panel */}
       <aside className={`
         fixed lg:static top-0 left-0 z-50 h-full w-64 bg-[#F8FAFC] border-r border-slate-200/80 
         flex flex-col justify-between p-6 shrink-0 transition-transform duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
         <div>
-          {/* Header Mobile & Logo */}
           <div className="flex items-center justify-between px-2 mb-8">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black text-base shadow-md shadow-blue-500/20">
@@ -55,7 +190,6 @@ export default function Sidebar({ isOpen, onClose }) {
             </button>
           </div>
 
-          {/* Nav Links */}
           <nav className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -64,7 +198,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={onClose} // Ferme automatiquement la barre latérale sur mobile
+                  onClick={onClose}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition-all text-sm ${
                     isActive 
                       ? "bg-blue-600 text-white shadow-sm" 
@@ -79,12 +213,110 @@ export default function Sidebar({ isOpen, onClose }) {
           </nav>
         </div>
 
-        {/* Support Box */}
-        <div className="bg-[#0D1527] text-white p-4 rounded-xl relative overflow-hidden hidden sm:block">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Support</p>
-          <p className="text-xs text-slate-300 leading-normal">
-            Need help with the platform? Contact support.
-          </p>
+        {/* Badgeuse Pointage Widget */}
+        <div className="space-y-3">
+          <div className="bg-white border border-slate-200/80 p-4 rounded-xl shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-blue-600" />
+                <span className="text-xs font-bold text-slate-900">Badgeuse Pointage</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${config.dot} animate-pulse`}></span>
+                <span className={`text-[10px] font-bold ${config.color}`}>{config.label}</span>
+              </div>
+            </div>
+
+            {/* Horloge */}
+            <div className="text-center mb-3">
+              <span className="text-2xl font-extrabold text-slate-900 tabular-nums">
+                {currentTime.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </span>
+              <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                {currentTime.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}
+              </p>
+            </div>
+
+            {/* Heures pointées */}
+            {pointage?.clockInTime && (
+              <div className="flex items-center justify-between text-[10px] text-slate-500 mb-3 px-1">
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  <span>Arrivée: <strong className="text-slate-800">{formatTime(pointage.clockInTime)}</strong></span>
+                </div>
+                {pointage.clockOutTime && (
+                  <div className="flex items-center gap-1">
+                    <LogOut className="w-3 h-3" />
+                    <span>Départ: <strong className="text-slate-800">{formatTime(pointage.clockOutTime)}</strong></span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Indicateurs de sécurité */}
+            {pointage?.clockInTime && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                  pointage.ipAddress ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                }`}>
+                  <Wifi className="w-2.5 h-2.5" /> IP
+                </span>
+                <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                  pointage.location?.lat ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                }`}>
+                  <MapPin className="w-2.5 h-2.5" /> GPS
+                </span>
+                {currentStatus === "Anomalie" && (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600">
+                    <AlertTriangle className="w-2.5 h-2.5" /> Anomalie
+                  </span>
+                )}
+                {currentStatus === "En ligne" && (
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600">
+                    <CheckCircle className="w-2.5 h-2.5" /> Vérifié
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Boutons d'action */}
+            {currentStatus === "Non pointé" && (
+              <button
+                onClick={handleClockIn}
+                disabled={loadingPointage}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Fingerprint className="w-4 h-4" />
+                {loadingPointage ? "Pointage..." : "Pointer mon arrivée"}
+              </button>
+            )}
+
+            {(currentStatus === "En ligne" || currentStatus === "Inactif" || currentStatus === "Anomalie") && !pointage?.clockOutTime && (
+              <button
+                onClick={handleClockOut}
+                disabled={loadingPointage}
+                className="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                {loadingPointage ? "En cours..." : "Pointer mon départ"}
+              </button>
+            )}
+
+            {currentStatus === "Terminé" && (
+              <div className="text-center py-2">
+                <span className="text-[10px] font-bold text-emerald-600 flex items-center justify-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" /> Journée terminée
+                </span>
+              </div>
+            )}
+
+            {/* Erreur géolocalisation */}
+            {geoError && (
+              <p className="text-[10px] text-rose-500 mt-2 text-center font-medium">
+                {geoError}
+              </p>
+            )}
+          </div>
         </div>
       </aside>
     </>

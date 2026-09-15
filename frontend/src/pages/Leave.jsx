@@ -14,12 +14,12 @@ const Leave = () => {
   const [filterStatut, setFilterStatut] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // État pour savoir si on est en création ou en édition
   const [editingId, setEditingId] = useState(null);
 
+  // Correction : Valeur par défaut "Congé annuel" pour correspondre aux enums Mongoose
   const [formData, setFormData] = useState({
     employee: "",
-    typeConge: "Congé Payé",
+    typeConge: "Congé annuel",
     dateDebut: "",
     dateFin: "",
     motif: "",
@@ -29,7 +29,6 @@ const Leave = () => {
   const [actionType, setActionType] = useState(null);
   const [commentaireAdmin, setCommentaireAdmin] = useState("");
   
-  // État de l'alerte modale centrée
   const [modalAlert, setModalAlert] = useState({ open: false, type: "", text: "" });
 
   const showAlert = (type, text) => {
@@ -75,25 +74,22 @@ const Leave = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Traitement Création ou Modification
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
       if (editingId) {
-        // Mode Modification
         const { data } = await api.put(`/leaves/${editingId}`, formData);
         showAlert("success", data.message || "Demande modifiée avec succès.");
         setEditingId(null);
       } else {
-        // Mode Création
         const { data } = await api.post("/leaves", formData);
         showAlert("success", data.message || "Demande créée avec succès.");
       }
 
       setFormData({
         employee: "",
-        typeConge: "Congé Payé",
+        typeConge: "Congé annuel",
         dateDebut: "",
         dateFin: "",
         motif: "",
@@ -104,23 +100,20 @@ const Leave = () => {
     }
   };
 
-  // Préparer le formulaire pour la modification
   const handleEditClick = (leave) => {
     setEditingId(leave._id);
     
-    // Formater la date pour l'input date (YYYY-MM-DD)
     const formattedDebut = leave.dateDebut ? new Date(leave.dateDebut).toISOString().split('T')[0] : "";
     const formattedFin = leave.dateFin ? new Date(leave.dateFin).toISOString().split('T')[0] : "";
 
     setFormData({
       employee: leave.employee?._id || leave.employee || "",
-      typeConge: leave.typeConge || "Congé Payé",
+      typeConge: leave.typeConge || "Congé annuel",
       dateDebut: formattedDebut,
       dateFin: formattedFin,
       motif: leave.motif || "",
     });
 
-    // Remonter en haut de la page vers le formulaire
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -128,7 +121,7 @@ const Leave = () => {
     setEditingId(null);
     setFormData({
       employee: "",
-      typeConge: "Congé Payé",
+      typeConge: "Congé annuel",
       dateDebut: "",
       dateFin: "",
       motif: "",
@@ -206,7 +199,7 @@ const Leave = () => {
   return (
     <div className="space-y-6 max-w-[1500px] relative">
       
-      {/* 1. MODALE D'ALERTE CENTRÉE SUR L'ÉCRAN */}
+      {/* MODALE D'ALERTE CENTRÉE */}
       {modalAlert.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4 text-center transform transition-all animate-in fade-in zoom-in duration-200">
@@ -298,10 +291,13 @@ const Leave = () => {
                 value={formData.typeConge}
                 onChange={handleChange}
               >
-                <option value="Congé Payé">Congé Payé</option>
-                <option value="Maladie">Maladie</option>
-                <option value="Sans Solde">Sans Solde</option>
-                <option value="Maternité/Paternité">Maternité/Paternité</option>
+                {/* Alignement strict des valeurs `value` avec les enums Mongoose */}
+                <option value="Congé annuel">Congé Payé / Annuel</option>
+                <option value="Congé maladie">Maladie</option>
+                <option value="Congé sans solde">Sans Solde</option>
+                <option value="Congé maternité">Maternité</option>
+                <option value="Congé paternité">Paternité</option>
+                <option value="Autre">Autre</option>
               </select>
             </div>
 
@@ -335,7 +331,9 @@ const Leave = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Motif</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Motif <span className="text-rose-500">*</span>
+            </label>
             <textarea
               name="motif"
               rows="2"
@@ -343,6 +341,7 @@ const Leave = () => {
               placeholder="Précisez le motif de la demande..."
               value={formData.motif}
               onChange={handleChange}
+              required
             ></textarea>
           </div>
 
@@ -441,7 +440,6 @@ const Leave = () => {
                     <td className="py-3.5 px-6 text-slate-500 italic">{leave.commentaireAdmin || "-"}</td>
                     <td className="py-3.5 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Actions Administrateur */}
                         {isAdmin && leave.statut === "En attente" && (
                           <>
                             <button
@@ -467,10 +465,8 @@ const Leave = () => {
                           </>
                         )}
 
-                        {/* Actions uniquement si EN ATTENTE */}
                         {leave.statut === "En attente" && (
                           <>
-                            {/* BOUTON MODIFIER */}
                             <button
                               title="Modifier la demande"
                               onClick={() => handleEditClick(leave)}
@@ -479,7 +475,6 @@ const Leave = () => {
                               <Edit3 className="w-4 h-4" />
                             </button>
 
-                            {/* BOUTON SUPPRIMER/ANNULER */}
                             <button
                               title="Annuler la demande"
                               onClick={() => handleCancel(leave._id)}

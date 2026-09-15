@@ -7,7 +7,6 @@ export default function Topbar({ profile, onLogout, onOpenSidebar }) {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Ferme le dropdown si on clique en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -20,8 +19,6 @@ export default function Topbar({ profile, onLogout, onOpenSidebar }) {
 
   return (
     <header className="h-20 border-b border-slate-200/60 px-4 sm:px-8 flex items-center justify-between gap-4 shrink-0 bg-[#F8FAFC]">
-      
-      {/* Menu Burger (Mobile) + Barre de Recherche */}
       <div className="flex items-center gap-3 flex-1 max-w-md">
         <button 
           onClick={onOpenSidebar}
@@ -41,14 +38,12 @@ export default function Topbar({ profile, onLogout, onOpenSidebar }) {
         </div>
       </div>
 
-      {/* Droite : Notifications & Profil Utilisateur */}
       <div className="flex items-center gap-3 sm:gap-4">
         <button className="p-2 rounded-xl text-slate-500 hover:bg-slate-200/50 relative transition-all">
           <Bell className="w-5 h-5" />
           <span className="w-2 h-2 bg-blue-600 rounded-full absolute top-2 right-2"></span>
         </button>
 
-        {/* Menu Déroulant Profil */}
         <div className="relative" ref={dropdownRef}>
           <button 
             onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -68,9 +63,8 @@ export default function Topbar({ profile, onLogout, onOpenSidebar }) {
             <ChevronDown className="w-4 h-4 text-slate-400 hidden sm:block" />
           </button>
 
-          {/* Modale / Dropdown Menu */}
           {dropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50">
               <div className="px-4 py-2.5 border-b border-slate-100 md:hidden">
                 <p className="text-xs font-bold text-slate-900">{profile?.name || "Alex Durand"}</p>
                 <p className="text-[10px] text-slate-400 capitalize">{profile?.role || "Employee"}</p>
