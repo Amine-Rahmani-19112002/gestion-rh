@@ -1,31 +1,50 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { 
   Users, CalendarX, Award, 
-  UserPlus, CheckSquare, FilePlus, MoreHorizontal, Calendar, ArrowRight 
+  UserPlus, CheckSquare, FilePlus, MoreHorizontal, Calendar, ArrowRight,
+  Phone, Mail, Bell, Clock, Laptop, CheckCircle2, AlertTriangle, RefreshCw
 } from "lucide-react";
 import api from "../api/axios";
 
 function Dashboard() {
   const [profile, setProfile] = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Récupération des données du profil au chargement
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get("/auth/me");
-        setProfile(res.data);
-      } catch (err) {
-        console.error("Erreur chargement profil:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchDashboardData = async () => {
+    try {
+      const [profileRes, statsRes] = await Promise.all([
+        api.get("/auth/me").catch((err) => {
+          console.error("Erreur chargement profil:", err);
+          return { data: null };
+        }),
+        api.get("/dashboard/stats").catch((err) => {
+          console.error("Erreur chargement stats:", err);
+          return { data: null };
+        }),
+      ]);
 
-    fetchProfile();
+      if (profileRes?.data) setProfile(profileRes.data);
+      if (statsRes?.data) setStats(statsRes.data);
+    } catch (err) {
+      console.error("Erreur générale Dashboard:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
+  };
 
   if (loading) {
     return (
@@ -35,310 +54,549 @@ function Dashboard() {
     );
   }
 
+  // Calculs dynamiques pour les jauges
+  const presenceRate = stats?.cards?.presenceRate ?? 100;
+  const onSiteCount = stats?.cards?.onSiteCount ?? 0;
+  const teleworkCount = stats?.cards?.teleworkToday ?? 0;
+  const totalOnWork = onSiteCount + teleworkCount;
+  const onSitePercent = totalOnWork > 0 ? Math.round((onSiteCount / totalOnWork) * 100) : 80;
+  const teleworkPercent = 100 - onSitePercent;
+
+  // Calcul du décalage SVG pour le camembert (Donut)
+  const donutItems = stats?.motifsAbsence?.items || [
+    { name: "Congés payés", percent: 45, color: "#2563eb" },
+    { name: "Maladie / AT", percent: 30, color: "#64748b" },
+    { name: "RTT & Récup", percent: 15, color: "#93c5fd" },
+    { name: "Retards / Non just.", percent: 10, color: "#e11d48" },
+  ];
+
+  let cumulativePercent = 0;
+
   return (
     <div className="space-y-6 max-w-[1500px]">
       
-      {/* ROW 1: KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Total Employees</p>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-extrabold text-slate-900">1,248</span>
-              <span className="inline-flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                +12
-              </span>
-            </div>
-          </div>
-          <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
-            <Users className="w-5 h-5" />
-          </div>
+      {/* HEADER AVEC TITRE ET BOUTON RAFRAÎCHIR */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Bonjour, {profile?.name || "Collaborateur"} 👋
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Voici un aperçu en temps réel de l'activité RH et de la présence aujourd'hui.
+          </p>
         </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Active Leaves</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-slate-900">42</span>
-              <span className="text-xs text-slate-400 font-medium">Today</span>
-            </div>
-          </div>
-          <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-            <CalendarX className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Pending Requests</p>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-extrabold text-slate-900">18</span>
-              <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">
-                Requires Action
-              </span>
-            </div>
-          </div>
-          <div className="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
-            <Calendar className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Upcoming Evals</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-slate-900">36</span>
-              <span className="text-xs text-slate-400 font-medium">This Month</span>
-            </div>
-          </div>
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Award className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-
-      {/* ROW 2: Monthly Leave Trends & Team Absences */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-bold text-slate-900">Monthly Leave Trends</h3>
-            <button className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
-              View Report <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="h-60 flex items-end justify-between gap-6 pt-6 px-4 border-b border-slate-100 relative">
-            <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-[10px] font-medium text-slate-400">
-              <span>100</span>
-              <span>75</span>
-              <span>50</span>
-              <span>25</span>
-            </div>
-
-            <div className="w-full pl-8 flex items-end justify-between h-full gap-4">
-              <div className="w-full flex flex-col items-center gap-3">
-                <div className="w-full bg-blue-100/70 rounded-t" style={{ height: "45%" }}></div>
-                <span className="text-xs text-slate-400 font-medium">Jan</span>
-              </div>
-              <div className="w-full flex flex-col items-center gap-3">
-                <div className="w-full bg-blue-100/70 rounded-t" style={{ height: "40%" }}></div>
-                <span className="text-xs text-slate-400 font-medium">Feb</span>
-              </div>
-              <div className="w-full flex flex-col items-center gap-3">
-                <div className="w-full bg-blue-100/70 rounded-t" style={{ height: "55%" }}></div>
-                <span className="text-xs text-slate-400 font-medium">Mar</span>
-              </div>
-              <div className="w-full flex flex-col items-center gap-3">
-                <div className="w-full bg-blue-100/70 rounded-t" style={{ height: "50%" }}></div>
-                <span className="text-xs text-slate-400 font-medium">Apr</span>
-              </div>
-              <div className="w-full flex flex-col items-center gap-3">
-                <div className="w-full bg-blue-100/70 rounded-t" style={{ height: "65%" }}></div>
-                <span className="text-xs text-slate-400 font-medium">May</span>
-              </div>
-              <div className="w-full flex flex-col items-center gap-3">
-                <div className="w-full bg-blue-600 rounded-t" style={{ height: "85%" }}></div>
-                <span className="text-xs text-slate-400 font-medium">Jun</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-slate-900">Team Absences</h3>
-              <Calendar className="w-4 h-4 text-slate-400" />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center font-bold text-xs text-slate-700">
-                    SJ
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">Sarah Jenkins</p>
-                    <p className="text-[11px] text-slate-400">Annual Leave</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-slate-700">Jun 12-15</p>
-                  <span className="text-[10px] font-bold text-emerald-600">Approved</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-slate-200 rounded-full flex items-center justify-center font-bold text-xs text-slate-700">
-                    MC
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">Marcus Chen</p>
-                    <p className="text-[11px] text-slate-400">Sick Leave</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-slate-700">Jun 14</p>
-                  <span className="text-[10px] font-bold text-rose-500">Pending</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-xs">
-                    EL
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900">Elena Rossi</p>
-                    <p className="text-[11px] text-slate-400">Maternity Leave</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-bold text-slate-700">Ongoing</p>
-                  <span className="text-[10px] font-bold text-emerald-600">Approved</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <button className="w-full py-2 border border-slate-200 text-blue-600 font-bold text-xs rounded-xl hover:bg-slate-50 transition-all mt-4">
-            View Full Calendar
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+            title="Rafraîchir les statistiques"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-600" : ""}`} />
+            <span>{refreshing ? "Mise à jour..." : "Actualiser"}</span>
           </button>
         </div>
       </div>
 
-      {/* ROW 3: Department Distribution, Quick Actions, Recent Activity */}
+      {/* ROW 1: KPI CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        
+        {/* CARTE 1 : TAUX DE PRÉSENCE */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-slate-800">Taux de présence<br/>aujourd'hui</h3>
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2 mb-4">
+            <span className="text-3xl font-extrabold text-slate-900">{presenceRate}%</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+              presenceRate >= 90 ? "text-emerald-600 bg-emerald-50" : "text-amber-600 bg-amber-50"
+            }`}>
+              {presenceRate >= 90 ? "↑ Normal" : "↓ Bas"}
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 rounded-full h-1.5 mb-3 flex overflow-hidden">
+            <div className="bg-blue-600 h-1.5 rounded-l-full transition-all duration-500" style={{ width: `${onSitePercent}%` }} title={`Sur site : ${onSiteCount}`}></div>
+            <div className="bg-blue-900 h-1.5 rounded-r-full transition-all duration-500" style={{ width: `${teleworkPercent}%` }} title={`Télétravail : ${teleworkCount}`}></div>
+          </div>
+          <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+            <span><strong className="text-slate-800">{onSiteCount}</strong> sur site</span>
+            <span><strong className="text-slate-800">{teleworkCount}</strong> télétravail</span>
+          </div>
+        </div>
+
+        {/* CARTE 2 : RETARDS */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-slate-800">Retards signalés ce<br/>matin</h3>
+            <div className="p-2 bg-slate-100 text-slate-600 rounded-xl">
+              <CalendarX className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2 mb-6">
+            <span className="text-3xl font-extrabold text-slate-900">
+              {stats?.cards?.delaysToday ?? 0}
+            </span>
+            <span className="text-xs text-slate-500 font-medium">
+              {(stats?.cards?.delaysToday || 0) > 1 ? "collaborateurs" : "collaborateur"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg font-medium">
+              Moyenne : {stats?.cards?.avgDelayMinutes ?? 0} min
+            </span>
+            <Link to="/absences" className="text-blue-600 font-medium hover:underline">
+              Voir détails
+            </Link>
+          </div>
+        </div>
+
+        {/* CARTE 3 : ABSENCES DU JOUR */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-slate-800">Absences du<br/>jour</h3>
+            {(stats?.cards?.unjustifiedToday || 0) > 0 ? (
+              <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-full border border-rose-100 animate-pulse">
+                {stats.cards.unjustifiedToday} alerte{stats.cards.unjustifiedToday > 1 ? "s" : ""}
+              </span>
+            ) : (
+              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                À jour
+              </span>
+            )}
+          </div>
+          <div className="flex items-baseline gap-2 mb-4">
+            <span className="text-3xl font-extrabold text-slate-900">
+              {stats?.cards?.absencesToday ?? 0}
+            </span>
+            <span className="text-xs text-slate-500 font-medium">total au registre</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-slate-50 rounded-lg py-1.5">
+              <span className="block text-sm font-bold text-slate-800">
+                {stats?.cards?.congesToday ?? 0}
+              </span>
+              <span className="block text-[9px] font-bold text-slate-400 uppercase">Congés</span>
+            </div>
+            <div className="bg-slate-50 rounded-lg py-1.5">
+              <span className="block text-sm font-bold text-slate-800">
+                {stats?.cards?.maladieToday ?? 0}
+              </span>
+              <span className="block text-[9px] font-bold text-slate-400 uppercase">Maladie</span>
+            </div>
+            <div className={`rounded-lg py-1.5 ${
+              (stats?.cards?.unjustifiedToday || 0) > 0
+                ? "bg-rose-50 border border-rose-100"
+                : "bg-slate-50"
+            }`}>
+              <span className={`block text-sm font-bold ${
+                (stats?.cards?.unjustifiedToday || 0) > 0 ? "text-rose-600" : "text-slate-800"
+              }`}>
+                {stats?.cards?.unjustifiedToday ?? 0}
+              </span>
+              <span className={`block text-[9px] font-bold uppercase ${
+                (stats?.cards?.unjustifiedToday || 0) > 0 ? "text-rose-500" : "text-slate-400"
+              }`}>
+                Injustifiées
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* CARTE 4 : DEMANDES EN ATTENTE */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-bold text-slate-800">Demandes en attente</h3>
+            <div className="p-2 bg-blue-600 text-white rounded-xl">
+              <CheckSquare className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2 mb-6">
+            <span className="text-3xl font-extrabold text-slate-900">
+              {stats?.cards?.pendingLeaves ?? 0}
+            </span>
+            <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+              Congés à valider
+            </span>
+          </div>
+          <Link
+            to="/leaves"
+            className="flex items-center justify-between text-xs text-slate-500 font-medium hover:text-blue-600 transition-colors"
+          >
+            <span>
+              {stats?.cards?.pendingLeaves ?? 0} demande{(stats?.cards?.pendingLeaves || 0) > 1 ? "s" : ""} en attente
+            </span>
+            <ArrowRight className="w-4 h-4 text-blue-600" />
+          </Link>
+        </div>
+      </div>
+
+      {/* ROW 2: Ponctualité & Assiduité par Département & Absences Non Justifiées */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm">
-          <h3 className="text-base font-bold text-slate-900 mb-4">Department Distribution</h3>
-          
-          <div className="flex justify-center items-center relative my-4">
-            <svg className="w-44 h-44 transform -rotate-90" viewBox="0 0 36 36">
-              <path
-                className="text-indigo-100"
-                strokeWidth="4"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-blue-600"
-                strokeDasharray="45, 100"
-                strokeWidth="4"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-              <path
-                className="text-emerald-400"
-                strokeDasharray="30, 100"
-                strokeDashoffset="-45"
-                strokeWidth="4"
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="none"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              />
-            </svg>
-
-            <div className="absolute text-center">
-              <span className="text-2xl font-extrabold text-slate-900">8</span>
-              <p className="text-[10px] font-bold text-slate-400 uppercase">Depts</p>
+        
+        {/* PAR DÉPARTEMENT */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Ponctualité & Assiduité par Département</h3>
+              <p className="text-xs text-slate-500 mt-1">Comparaison hebdomadaire du taux de présence effectif</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Présence effective</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-200"></span> Cible (95%)</span>
             </div>
           </div>
 
-          <div className="space-y-2 text-xs pt-2">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span> Engineering</span>
-              <span className="font-semibold text-slate-600">45%</span>
+          <div className="space-y-5 pt-4">
+            {stats?.employeesByDepartment && stats.employeesByDepartment.length > 0 ? (
+              stats.employeesByDepartment.map((dept, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="w-32 text-right">
+                    <p className="text-sm font-bold text-slate-800 truncate" title={dept.name}>{dept.name}</p>
+                    <p className="text-[10px] text-slate-500">{dept.count}</p>
+                  </div>
+                  <div className="flex-1 relative flex items-center">
+                    <div className="w-full bg-slate-100 h-6 rounded-full overflow-hidden flex relative">
+                       <div 
+                         className="bg-blue-600 h-full flex items-center px-3 transition-all duration-500" 
+                         style={{ width: `${Math.min(100, Math.max(15, dept.rate))}%` }}
+                       >
+                          <span className="text-white text-xs font-bold">{dept.rate}%</span>
+                       </div>
+                    </div>
+                    {dept.retard > 0 ? (
+                       <span className="absolute right-3 text-slate-700 text-xs font-bold bg-white/80 px-2 py-0.5 rounded shadow-sm">
+                         {dept.retard} retard{dept.retard > 1 ? "s" : ""}
+                       </span>
+                    ) : (
+                       <span className="absolute right-3 text-slate-500 text-xs font-semibold bg-white/80 px-2 py-0.5 rounded">
+                         0 retard
+                       </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                Aucun collaborateur ou département enregistré pour le moment.
+              </div>
+            )}
+            <div className="flex items-center justify-between pl-36 pr-4 text-[10px] font-medium text-slate-400 mt-2">
+               <span>85%</span>
+               <span>90%</span>
+               <span>95% (Cible)</span>
+               <span>100%</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Sales</span>
-              <span className="font-semibold text-slate-600">30%</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-indigo-100"></span> Marketing</span>
-              <span className="font-semibold text-slate-600">15%</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm">
-          <h3 className="text-base font-bold text-slate-900 mb-4">Quick Actions</h3>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <button 
-              onClick={() => navigate("/employees")}
-              className="p-4 bg-slate-100/60 hover:bg-blue-50 hover:text-blue-600 rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
-            >
-              <UserPlus className="w-5 h-5 text-blue-600" />
-              <span className="text-xs font-bold text-slate-700 group-hover:text-blue-600">Add Employee</span>
-            </button>
-
-            <button 
-              onClick={() => navigate("/leave")}
-              className="p-4 bg-slate-100/60 hover:bg-emerald-50 hover:text-emerald-600 rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
-            >
-              <CheckSquare className="w-5 h-5 text-emerald-500" />
-              <span className="text-xs font-bold text-slate-700 group-hover:text-emerald-600">Approve Leave</span>
-            </button>
-
-            <button 
-              onClick={() => navigate("/contracts")}
-              className="p-4 bg-slate-100/60 hover:bg-cyan-50 hover:text-cyan-600 rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
-            >
-              <FilePlus className="w-5 h-5 text-slate-600" />
-              <span className="text-xs font-bold text-slate-700 group-hover:text-cyan-600">New Contract</span>
-            </button>
-
-            <button 
-              onClick={() => navigate("/settings")}
-              className="p-4 bg-slate-100/60 hover:bg-slate-200 rounded-xl flex flex-col items-center justify-center gap-2 transition-all group"
-            >
-              <MoreHorizontal className="w-5 h-5 text-slate-600" />
-              <span className="text-xs font-bold text-slate-700">More Actions</span>
-            </button>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm">
-          <h3 className="text-base font-bold text-slate-900 mb-4">Recent Activity</h3>
-          
-          <div className="space-y-4 text-xs">
-            <div className="flex gap-3">
-              <span className="w-2 h-2 rounded-full bg-blue-600 mt-1 shrink-0"></span>
-              <div>
-                <p className="text-[10px] text-slate-400 font-medium">10 mins ago</p>
-                <p className="text-slate-900 font-bold">Contract Signed - <span className="font-normal text-slate-600">Thomas Miller</span></p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0"></span>
-              <div>
-                <p className="text-[10px] text-slate-400 font-medium">2 hours ago</p>
-                <p className="text-slate-900 font-bold">Leave Approved - <span className="font-normal text-slate-600">Sarah Jenkins</span></p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <span className="w-2 h-2 rounded-full bg-slate-300 mt-1 shrink-0"></span>
-              <div>
-                <p className="text-[10px] text-slate-400 font-medium">Yesterday, 14:30</p>
-                <p className="text-slate-900 font-bold">Evaluation Completed - <span className="font-normal text-slate-600">Design Team</span></p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <span className="w-2 h-2 rounded-full bg-slate-300 mt-1 shrink-0"></span>
-              <div>
-                <p className="text-[10px] text-slate-400 font-medium">Yesterday, 09:15</p>
-                <p className="text-slate-900 font-bold">New Employee Added - <span className="font-normal text-slate-600">Emily Chen</span></p>
-              </div>
-            </div>
+        {/* ABSENCES NON JUSTIFIÉES (ALERTES URGENTES) */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col">
+          <div className="flex items-start justify-between mb-4">
+             <div className="flex items-center gap-3">
+               <div className="p-2 bg-rose-50 text-rose-600 rounded-lg">
+                 <Bell className="w-5 h-5" />
+               </div>
+               <h3 className="text-base font-bold text-slate-900 leading-tight">Absences Non<br/>Justifiées</h3>
+             </div>
+             {(stats?.unjustifiedAbsencesList?.length || 0) > 0 ? (
+               <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-full border border-rose-100">
+                 {stats.unjustifiedAbsencesList.length} urgence{stats.unjustifiedAbsencesList.length > 1 ? "s" : ""}
+               </span>
+             ) : (
+               <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                 Aucune
+               </span>
+             )}
           </div>
+          
+          <p className="text-xs text-slate-500 mb-6">
+            Collaborateurs absents sans déclaration préalable. Une prise de contact immédiate est requise par la convention RH.
+          </p>
+
+          <div className="space-y-4 mb-auto">
+            {stats?.unjustifiedAbsencesList && stats.unjustifiedAbsencesList.length > 0 ? (
+              stats.unjustifiedAbsencesList.map((abs, idx) => {
+                const emp = abs.employee;
+                const initials = emp ? `${emp.prenom?.[0] || ""}${emp.nom?.[0] || ""}`.toUpperCase() : "??";
+                return (
+                  <div key={idx} className="flex items-center justify-between p-3 border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-rose-100 text-rose-700 rounded-full flex items-center justify-center font-bold text-sm">
+                        {initials}
+                      </div>
+                      <div className="max-w-[130px] sm:max-w-none">
+                        <p className="text-sm font-bold text-slate-900 truncate">
+                          {emp ? `${emp.prenom} ${emp.nom}` : "Collaborateur inconnu"}
+                        </p>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {emp?.poste || "Poste non défini"} • {emp?.departement || "RH"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {emp?.telephone && (
+                        <a 
+                          href={`tel:${emp.telephone}`} 
+                          className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+                          title={`Appeler ${emp.telephone}`}
+                        >
+                          <Phone className="w-4 h-4" />
+                        </a>
+                      )}
+                      {emp?.email && (
+                        <a 
+                          href={`mailto:${emp.email}`} 
+                          className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+                          title={`Envoyer un email à ${emp.email}`}
+                        >
+                          <Mail className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center p-6 bg-slate-50/60 rounded-xl border border-dashed border-slate-200 text-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2" />
+                <p className="text-xs font-bold text-slate-700">Aucune alerte en attente</p>
+                <p className="text-[11px] text-slate-400 mt-1">Tous les absents sont justifiés aujourd'hui.</p>
+              </div>
+            )}
+          </div>
+
+          <Link
+            to="/absences"
+            className="block text-center w-full py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition-all mt-6 shadow-sm"
+          >
+            Déclencher protocole relance RH
+          </Link>
+        </div>
+      </div>
+
+      {/* ROW 3: Derniers Incidents du Jour, Motifs d'Absence, Actions */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        
+        {/* DERNIERS INCIDENTS */}
+        <div className="xl:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+           <div className="flex items-center justify-between mb-4">
+             <div>
+               <div className="flex items-center gap-3">
+                 <h3 className="text-base font-bold text-slate-900">Derniers Incidents du Jour</h3>
+                 <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">En direct</span>
+               </div>
+               <p className="text-xs text-slate-500 mt-1">Journal des anomalies et signalements récents</p>
+             </div>
+             <Link to="/absences" className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1">
+               Voir tout l'historique <ArrowRight className="w-3 h-3" />
+             </Link>
+           </div>
+           
+           <div className="overflow-x-auto">
+             <table className="w-full text-left text-xs">
+               <thead>
+                 <tr className="text-[10px] text-slate-500 font-bold uppercase border-b border-slate-100">
+                   <th className="pb-3 font-bold">COLLABORATEUR</th>
+                   <th className="pb-3 font-bold">DÉPARTEMENT</th>
+                   <th className="pb-3 font-bold">ÉVÉNEMENT</th>
+                   <th className="pb-3 font-bold">MOTIF DÉCLARÉ</th>
+                   <th className="pb-3 font-bold">STATUT</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-slate-50">
+                 {stats?.recentIncidents && stats.recentIncidents.length > 0 ? (
+                   stats.recentIncidents.map((inc, i) => {
+                     const emp = inc.employee;
+                     const initials = emp ? `${emp.prenom?.[0] || ""}${emp.nom?.[0] || ""}`.toUpperCase() : "??";
+                     return (
+                       <tr key={i} className="hover:bg-slate-50/60 transition-colors">
+                         <td className="py-3">
+                           <div className="flex items-center gap-3">
+                             <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-700">
+                               {initials}
+                             </div>
+                             <div>
+                               <p className="font-bold text-slate-900">
+                                 {emp ? `${emp.prenom} ${emp.nom}` : "Inconnu"}
+                               </p>
+                               <p className="text-[10px] text-slate-400">
+                                 {emp?.matricule || "N/A"}
+                               </p>
+                             </div>
+                           </div>
+                         </td>
+                         <td className="py-3 text-slate-600">
+                           {emp?.departement || "Non défini"}
+                         </td>
+                         <td className="py-3">
+                           {inc.type === "Retard" ? (
+                             <div className="flex items-center gap-1.5 text-amber-600 font-bold">
+                               <CalendarX className="w-4 h-4 text-amber-500" />
+                               <span>Retard (+{inc.retardMinutes || 0} min)</span>
+                             </div>
+                           ) : inc.type === "Départ anticipé" ? (
+                             <div className="flex items-center gap-1.5 text-blue-600 font-bold">
+                               <ArrowRight className="w-4 h-4 text-blue-500" />
+                               <span>Départ ant. ({inc.heureDepart || "—"})</span>
+                             </div>
+                           ) : inc.type === "Télétravail" ? (
+                             <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                               <Laptop className="w-4 h-4 text-emerald-500" />
+                               <span>Télétravail</span>
+                             </div>
+                           ) : (
+                             <div className="flex items-center gap-1.5 text-rose-600 font-bold">
+                               <Bell className="w-4 h-4 text-rose-500" />
+                               <span>Absence imprévue</span>
+                             </div>
+                           )}
+                         </td>
+                         <td className="py-3 text-slate-600 max-w-[180px] truncate" title={inc.motif}>
+                           {inc.motif || <span className="italic text-slate-400">Aucun motif transmis</span>}
+                         </td>
+                         <td className="py-3">
+                           {inc.justifiee ? (
+                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-100">
+                               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Justifié
+                             </span>
+                           ) : (
+                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-100">
+                               <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Non régularisé
+                             </span>
+                           )}
+                         </td>
+                       </tr>
+                     );
+                   })
+                 ) : (
+                   <tr>
+                     <td colSpan="5" className="py-8 text-center text-slate-400 text-xs">
+                       Aucun incident ou absence enregistré pour le moment.
+                     </td>
+                   </tr>
+                 )}
+               </tbody>
+             </table>
+           </div>
+        </div>
+
+        {/* MOTIFS D'ABSENCE & ACTIONS RAPIDES */}
+        <div className="flex flex-col gap-6">
+           
+           {/* MOTIFS D'ABSENCE DU MOIS */}
+           <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm">
+             <div className="flex items-center justify-between mb-4">
+               <h3 className="text-base font-bold text-slate-900">Motifs d'Absence du Mois</h3>
+               <div className="text-right leading-tight">
+                  <span className="block text-[10px] font-bold text-slate-800 capitalize">
+                    {new Date().toLocaleString("fr-FR", { month: "long" })}
+                  </span>
+                  <span className="block text-[10px] text-slate-500">
+                    {new Date().getFullYear()}
+                  </span>
+               </div>
+             </div>
+             
+             <div className="flex items-center justify-between mt-6">
+                <div className="relative w-32 h-32 flex-shrink-0">
+                  <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
+                    <circle cx="18" cy="18" r="15.9155" fill="transparent" stroke="#f1f5f9" strokeWidth="4"></circle>
+                    {donutItems.map((item, idx) => {
+                      const strokeDasharray = `${item.percent} ${100 - item.percent}`;
+                      const strokeDashoffset = 100 - cumulativePercent + 25;
+                      cumulativePercent += item.percent;
+                      return (
+                        <circle
+                          key={idx}
+                          cx="18"
+                          cy="18"
+                          r="15.9155"
+                          fill="transparent"
+                          stroke={item.color}
+                          strokeWidth="4"
+                          strokeDasharray={strokeDasharray}
+                          strokeDashoffset={strokeDashoffset}
+                          className="transition-all duration-700"
+                        />
+                      );
+                    })}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xl font-extrabold text-slate-900">
+                      {stats?.motifsAbsence?.totalDays ?? 0}
+                    </span>
+                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Événements</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-3 text-xs w-full pl-6">
+                  {donutItems.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }}></span>
+                        <span className="text-slate-700">{item.name}</span>
+                      </span>
+                      <span className="font-bold text-slate-900">{item.percent}%</span>
+                    </div>
+                  ))}
+                </div>
+             </div>
+           </div>
+
+           {/* ACTIONS & RACCOURCIS */}
+           <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex-1">
+             <h3 className="text-base font-bold text-slate-900 mb-4">Actions & Raccourcis RH</h3>
+             <div className="space-y-3">
+                <Link 
+                  to="/leaves" 
+                  className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl flex items-center gap-3 transition-all text-left group"
+                >
+                   <div className="p-2 bg-white text-blue-600 rounded-lg shadow-sm border border-slate-100 group-hover:scale-105 transition-transform">
+                      <CheckSquare className="w-4 h-4" />
+                   </div>
+                   <div className="flex-1">
+                      <p className="text-xs font-bold text-slate-900">Demandes de congés</p>
+                      <p className="text-[10px] text-slate-500">
+                        {stats?.cards?.pendingLeaves || 0} demande{(stats?.cards?.pendingLeaves || 0) > 1 ? "s" : ""} en attente d'approbation
+                      </p>
+                   </div>
+                   <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                </Link>
+
+                <Link 
+                  to="/absences" 
+                  className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl flex items-center gap-3 transition-all text-left group"
+                >
+                   <div className="p-2 bg-white text-blue-600 rounded-lg shadow-sm border border-slate-100 group-hover:scale-105 transition-transform">
+                      <FilePlus className="w-4 h-4" />
+                   </div>
+                   <div className="flex-1">
+                      <p className="text-xs font-bold text-slate-900">Registre des absences & retards</p>
+                      <p className="text-[10px] text-slate-500">Bilan absentéisme, retards et justificatifs</p>
+                   </div>
+                   <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-colors" />
+                </Link>
+
+                <Link 
+                  to="/employees" 
+                  className="w-full p-3 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl flex items-center gap-3 transition-all text-left group"
+                >
+                   <div className="p-2 bg-white text-blue-600 rounded-lg shadow-sm border border-blue-100 group-hover:scale-105 transition-transform">
+                      <Users className="w-4 h-4" />
+                   </div>
+                   <div className="flex-1">
+                      <p className="text-xs font-bold text-blue-900">Gestion des collaborateurs</p>
+                      <p className="text-[10px] text-blue-600/80">
+                        {stats?.cards?.totalEmployees || 0} collaborateur{(stats?.cards?.totalEmployees || 0) > 1 ? "s" : ""} dans l'annuaire
+                      </p>
+                   </div>
+                   <ArrowRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-colors" />
+                </Link>
+             </div>
+           </div>
         </div>
       </div>
 
