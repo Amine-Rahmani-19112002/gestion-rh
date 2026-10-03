@@ -144,6 +144,7 @@ export default function Absences() {
 
   // Chargement des employés
   const fetchEmployees = async () => {
+    if (!isAdmin) return;
     try {
       const { data } = await api.get("/employees");
       setEmployees(Array.isArray(data) ? data : []);
@@ -439,21 +440,25 @@ export default function Absences() {
         </div>
       )}
 
-      {/* 1. EN-TÊTE WORKFLOW RH */}
+      {/* 1. EN-TÊTE WORKFLOW RH / ESPACE PERSONNEL */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/70 shadow-sm">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-              Workflow Approbation RH
+            <span className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+              isAdmin ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isAdmin ? "bg-blue-600" : "bg-emerald-600"} animate-pulse`}></span>
+              {isAdmin ? "Workflow Approbation RH" : "Mon Espace Présence"}
             </span>
             <span className="text-xs text-slate-400">• Synchronisé en temps réel</span>
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Demandes & Déclarations d'absence / retard
+            {isAdmin ? "Demandes & Déclarations d'absence / retard" : "Mes Retards & Absences"}
           </h1>
           <p className="text-xs text-slate-500 font-medium">
-            Traitement des alertes, déclarations et régularisations en attente de validation RH.
+            {isAdmin 
+              ? "Traitement des alertes, déclarations et régularisations en attente de validation RH."
+              : "Consultez l'historique et l'état de vos déclarations et justificatifs de présence."}
           </p>
         </div>
 
@@ -985,136 +990,136 @@ export default function Absences() {
                 </div>
               </div>
 
-              {/* CARTE 2 : ZONE DE DÉCISION & ARBITRAGE RH */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-                    <h3 className="text-base font-black text-slate-900">
-                      Zone de décision & arbitrage RH
-                    </h3>
-                  </div>
-                  <span className="text-[11px] font-medium text-slate-400 italic">
-                    Décision opposable au bulletin de paie
-                  </span>
-                </div>
-
-                {/* Mode de régularisation retenu (3 Options Radio Interactives) */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-2.5">
-                    Mode de régularisation retenu :
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Option 1 : Tolérance */}
-                    <div
-                      onClick={() => setRegulationMode("tolerance")}
-                      className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
-                        regulationMode === "tolerance"
-                          ? "border-blue-600 bg-blue-50/50 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-black text-slate-900">
-                          Tolérance exceptionnelle
-                        </span>
-                        <input
-                          type="radio"
-                          name="regMode"
-                          checked={regulationMode === "tolerance"}
-                          onChange={() => setRegulationMode("tolerance")}
-                          className="accent-blue-600"
-                        />
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-tight">
-                        Motif transport/santé vérifié sans impact solde
-                      </p>
-                    </div>
-
-                    {/* Option 2 : Récupération */}
-                    <div
-                      onClick={() => setRegulationMode("recuperation")}
-                      className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
-                        regulationMode === "recuperation"
-                          ? "border-blue-600 bg-blue-50/50 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-black text-slate-900">
-                          Récupération d'heures
-                        </span>
-                        <input
-                          type="radio"
-                          name="regMode"
-                          checked={regulationMode === "recuperation"}
-                          onChange={() => setRegulationMode("recuperation")}
-                          className="accent-blue-600"
-                        />
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-tight">
-                        Report de{" "}
-                        {selectedAbsence.retardMinutes ? `${selectedAbsence.retardMinutes} min` : "l'absence"}{" "}
-                        en fin de journée
-                      </p>
-                    </div>
-
-                    {/* Option 3 : Retenue */}
-                    <div
-                      onClick={() => setRegulationMode("retenue")}
-                      className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
-                        regulationMode === "retenue"
-                          ? "border-blue-600 bg-blue-50/50 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-black text-slate-900">
-                          Retenue sur salaire
-                        </span>
-                        <input
-                          type="radio"
-                          name="regMode"
-                          checked={regulationMode === "retenue"}
-                          onChange={() => setRegulationMode("retenue")}
-                          className="accent-blue-600"
-                        />
-                      </div>
-                      <p className="text-[11px] text-slate-500 leading-tight">
-                        Imputation sur le traitement de paie du mois
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Note interne & Notification */}
-                <div className="space-y-2">
+              {isAdmin ? (
+                /* CARTE 2 : ZONE DE DÉCISION & ARBITRAGE RH (ADMIN SEULEMENT) */
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700">
-                      Notification au collaborateur & note interne RH :
-                    </label>
-                    <label className="flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={notifyManager}
-                        onChange={(e) => setNotifyManager(e.target.checked)}
-                        className="rounded accent-blue-600"
-                      />
-                      <span>Copier le manager direct</span>
-                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                      <h3 className="text-base font-black text-slate-900">
+                        Zone de décision & arbitrage RH
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-400 italic">
+                      Décision opposable au bulletin de paie
+                    </span>
                   </div>
-                  <textarea
-                    rows="2"
-                    value={rhNote}
-                    onChange={(e) => setRhNote(e.target.value)}
-                    placeholder="Ex: Justificatif vérifié. Retard toléré ce jour exceptionnellement compte tenu des perturbations majeures..."
-                    className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium text-slate-800 transition-all placeholder:text-slate-400"
-                  ></textarea>
-                </div>
 
-                {/* Boutons d'Action (Supprimer, Rejeter, Valider et Régulariser) */}
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-                  {isAdmin && (
+                  {/* Mode de régularisation retenu (3 Options Radio Interactives) */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2.5">
+                      Mode de régularisation retenu :
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Option 1 : Tolérance */}
+                      <div
+                        onClick={() => setRegulationMode("tolerance")}
+                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                          regulationMode === "tolerance"
+                            ? "border-blue-600 bg-blue-50/50 shadow-sm"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-black text-slate-900">
+                            Tolérance exceptionnelle
+                          </span>
+                          <input
+                            type="radio"
+                            name="regMode"
+                            checked={regulationMode === "tolerance"}
+                            onChange={() => setRegulationMode("tolerance")}
+                            className="accent-blue-600"
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-tight">
+                          Motif transport/santé vérifié sans impact solde
+                        </p>
+                      </div>
+
+                      {/* Option 2 : Récupération */}
+                      <div
+                        onClick={() => setRegulationMode("recuperation")}
+                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                          regulationMode === "recuperation"
+                            ? "border-blue-600 bg-blue-50/50 shadow-sm"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-black text-slate-900">
+                            Récupération d'heures
+                          </span>
+                          <input
+                            type="radio"
+                            name="regMode"
+                            checked={regulationMode === "recuperation"}
+                            onChange={() => setRegulationMode("recuperation")}
+                            className="accent-blue-600"
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-tight">
+                          Report de{" "}
+                          {selectedAbsence.retardMinutes ? `${selectedAbsence.retardMinutes} min` : "l'absence"}{" "}
+                          en fin de journée
+                        </p>
+                      </div>
+
+                      {/* Option 3 : Retenue */}
+                      <div
+                        onClick={() => setRegulationMode("retenue")}
+                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                          regulationMode === "retenue"
+                            ? "border-blue-600 bg-blue-50/50 shadow-sm"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-black text-slate-900">
+                            Retenue sur salaire
+                          </span>
+                          <input
+                            type="radio"
+                            name="regMode"
+                            checked={regulationMode === "retenue"}
+                            onChange={() => setRegulationMode("retenue")}
+                            className="accent-blue-600"
+                          />
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-tight">
+                          Imputation sur le traitement de paie du mois
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Note interne & Notification */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700">
+                        Notification au collaborateur & note interne RH :
+                      </label>
+                      <label className="flex items-center gap-1.5 text-[11px] text-slate-600 font-semibold cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={notifyManager}
+                          onChange={(e) => setNotifyManager(e.target.checked)}
+                          className="rounded accent-blue-600"
+                        />
+                        <span>Copier le manager direct</span>
+                      </label>
+                    </div>
+                    <textarea
+                      rows="2"
+                      value={rhNote}
+                      onChange={(e) => setRhNote(e.target.value)}
+                      placeholder="Ex: Justificatif vérifié. Retard toléré ce jour exceptionnellement compte tenu des perturbations majeures..."
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 font-medium text-slate-800 transition-all placeholder:text-slate-400"
+                    ></textarea>
+                  </div>
+
+                  {/* Boutons d'Action (Supprimer, Rejeter, Valider et Régulariser) */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                     <button
                       onClick={() => setDeleteTarget(selectedAbsence._id)}
                       className="w-full sm:w-auto px-4 py-2.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
@@ -1122,32 +1127,85 @@ export default function Absences() {
                       <Trash2 className="w-4 h-4" />
                       <span>Supprimer</span>
                     </button>
-                  )}
 
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                    <button
-                      disabled={actionLoading}
-                      onClick={handleReject}
-                      className="w-full sm:w-auto px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-all cursor-pointer"
-                    >
-                      Rejeter / Non justifiée
-                    </button>
+                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                      <button
+                        disabled={actionLoading}
+                        onClick={handleReject}
+                        className="w-full sm:w-auto px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-all cursor-pointer"
+                      >
+                        Rejeter / Non justifiée
+                      </button>
 
-                    <button
-                      disabled={actionLoading}
-                      onClick={handleValidateRegularize}
-                      className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {actionLoading ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4" />
-                      )}
-                      <span>Valider et régulariser</span>
-                    </button>
+                      <button
+                        disabled={actionLoading}
+                        onClick={handleValidateRegularize}
+                        className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        {actionLoading ? (
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}
+                        <span>Valider et régulariser</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* CARTE 2 : STATUT & SUIVI RH POUR L'EMPLOYÉ */
+                <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                      <h3 className="text-base font-black text-slate-900">
+                        Statut de votre demande & Traitement RH
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-medium text-slate-400">
+                      Suivi personnel
+                    </span>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600">État de la déclaration :</span>
+                      {selectedAbsence.justifiee ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Justifiée & Acceptée RH
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+                          <AlertTriangle className="w-3.5 h-3.5" /> En cours d'examen RH
+                        </span>
+                      )}
+                    </div>
+
+                    {selectedAbsence.retardMinutes > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Durée du retard enregistré :</span>
+                        <span className="font-bold text-slate-900">{selectedAbsence.retardMinutes} minutes</span>
+                      </div>
+                    )}
+
+                    {(selectedAbsence.heureArrivee || selectedAbsence.heureDepart) && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">Horaires constatés :</span>
+                        <span className="font-bold text-slate-900">
+                          {selectedAbsence.heureArrivee || "--:--"} → {selectedAbsence.heureDepart || "--:--"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Remarques du service RH :</label>
+                    <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-xl text-xs text-slate-700 font-medium">
+                      {selectedAbsence.commentaire || "Aucune remarque particulière du service RH pour le moment."}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="p-16 text-center bg-white rounded-3xl border border-slate-200/80 shadow-sm">
