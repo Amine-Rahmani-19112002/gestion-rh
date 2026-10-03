@@ -4,6 +4,15 @@ const Employee = require("../models/Employee");
 const getAbsences = async (req, res) => {
   try {
     const filter = {};
+
+    // Si l'utilisateur n'est pas administrateur, il ne consulte que ses propres absences
+    if (req.user && req.user.role !== "admin") {
+      if (!req.user.employee) {
+        return res.json([]);
+      }
+      filter.employee = req.user.employee;
+    }
+
     if (req.query.type) filter.type = req.query.type;
     if (req.query.justifiee !== undefined) {
       filter.justifiee = req.query.justifiee === "true";
@@ -31,6 +40,16 @@ const getAbsenceById = async (req, res) => {
       .populate("employee", "matricule nom prenom email poste departement typeContrat");
     if (!absence)
       return res.status(404).json({ message: "Absence introuvable" });
+
+    // Contrôle d'accès pour les collaborateurs
+    if (req.user && req.user.role !== "admin") {
+      if (!req.user.employee || absence.employee._id.toString() !== req.user.employee.toString()) {
+        return res.status(403).json({
+          message: "Accès refusé. Vous ne pouvez consulter que vos propres absences.",
+        });
+      }
+    }
+
     res.json(absence);
   } catch (error) {
     res.status(400).json({ message: error.message });
