@@ -11,6 +11,96 @@ const getDashboardStats = async (req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
+    // =========================================================================
+    // BRANCHE COLLABORATEUR (RÔLE EMPLOYÉ) : STATISTIQUES STRICTEMENT PERSONNELLES
+    // =========================================================================
+    if (req.user && req.user.role === "employe") {
+      const employeeId = req.user.employee;
+      const userId = req.user._id;
+
+      // 1. Pointage du jour de l'employé
+      const myPointageToday = await Pointage.findOne({
+        user: userId,
+        date: { $gte: startOfDay, $lte: endOfDay },
+      });
+
+      // 2. Absence / Télétravail du jour de l'employé
+      const myAbsenceToday = employeeId
+        ? await Absence.findOne({
+            employee: employeeId,
+            date: { $gte: startOfDay, $lte: endOfDay },
+          })
+        : null;
+
+      // 3. Congé actif aujourd'hui de l'employé
+      const myLeaveToday = employeeId
+        ? await Leave.findOne({
+            employee: employeeId,
+            statut: "Approuvé",
+            dateDebut: { $lte: endOfDay },
+            dateFin: { $gte: startOfDay },
+          })
+        : null;
+
+      // 4. Congés en attente et approuvés de l'employé
+      const myPendingLeaves = employeeId
+        ? await Leave.countDocuments({ employee: employeeId, statut: "En attente" })
+        : 0;
+      const myApprovedLeaves = employeeId
+        ? await Leave.countDocuments({ employee: employeeId, statut: "Approuvé" })
+        : 0;
+
+      // 5. Absences et retards du mois pour l'employé
+      const myMonthAbsences = employeeId
+        ? await Absence.find({
+            employee: employeeId,
+            date: { $gte: startOfMonth, $lt: startOfNextMonth },
+          })
+        : [];
+
+      const myDelaysThisMonth = myMonthAbsences.filter((a) => a.type === "Retard").length;
+      const myAbsencesThisMonth = myMonthAbsences.filter((a) => a.type === "Absence").length;
+      const myTeleworkThisMonth = myMonthAbsences.filter((a) => a.type === "Télétravail").length;
+
+      // 6. Mes derniers événements / demandes récents
+      const myRecentLeaves = employeeId
+        ? await Leave.find({ employee: employeeId }).sort({ createdAt: -1 }).limit(5)
+        : [];
+      const myRecentAbsences = employeeId
+        ? await Absence.find({ employee: employeeId }).sort({ date: -1 }).limit(5)
+        : [];
+
+      // Détermination de l'état actuel de l'employé
+      let currentStatusText = "Non pointé";
+      if (myLeaveToday) {
+        currentStatusText = `En congé (${myLeaveToday.typeConge})`;
+      } else if (myAbsenceToday) {
+        currentStatusText = myAbsenceToday.type;
+      } else if (myPointageToday?.clockInTime) {
+        currentStatusText = myPointageToday.status || "Présent";
+      }
+
+      return res.json({
+        isEmployee: true,
+        cards: {
+          currentStatus: currentStatusText,
+          clockInTime: myPointageToday?.clockInTime || null,
+          clockOutTime: myPointageToday?.clockOutTime || null,
+          pendingLeaves: myPendingLeaves,
+          approvedLeaves: myApprovedLeaves,
+          delaysThisMonth: myDelaysThisMonth,
+          absencesThisMonth: myAbsencesThisMonth,
+          teleworkThisMonth: myTeleworkThisMonth,
+        },
+        myRecentLeaves,
+        myRecentAbsences,
+        myPointageToday,
+      });
+    }
+
+    // =========================================================================
+    // BRANCHE ADMINISTRATEUR : VUE GLOBALE RH DE L'ENTREPRISE
+    // =========================================================================
     // 1. Employés
     const totalEmployees = await Employee.countDocuments();
     const activeEmployees = await Employee.countDocuments({ statut: "Actif" });

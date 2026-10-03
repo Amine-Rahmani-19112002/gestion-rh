@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Star, Sparkles } from "lucide-react";
 import api from "../api/axios";
 
@@ -157,9 +157,9 @@ function Login() {
                   <label className="block text-sm font-bold text-slate-700 transition-colors group-focus-within:text-blue-600">
                     Mot de passe
                   </label>
-                  <a href="#" className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                  <Link to="/forgot-password" className="text-sm font-bold text-blue-600 hover:text-blue-700 transition-colors">
                     Oublié ?
-                  </a>
+                  </Link>
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4.5 flex items-center pointer-events-none">
@@ -232,9 +232,16 @@ function Login() {
             </div>
           </div>
           
-          <p className="mt-8 text-center text-sm font-medium text-slate-500 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+          <p className="mt-6 text-center text-sm font-medium text-slate-600 animate-fade-in-up">
+            Pas encore de compte ?{" "}
+            <Link to="/register" className="font-bold text-blue-600 hover:text-blue-700 transition-colors underline decoration-blue-300 underline-offset-4 hover:decoration-blue-600">
+              Créer un compte
+            </Link>
+          </p>
+
+          <p className="mt-4 text-center text-xs font-medium text-slate-400 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
             Un problème d'accès ?{" "}
-            <a href="#" className="font-bold text-slate-900 hover:text-blue-600 transition-colors underline decoration-slate-300 underline-offset-4 hover:decoration-blue-600">
+            <a href="#" className="font-bold text-slate-600 hover:text-blue-600 transition-colors underline decoration-slate-300 underline-offset-4 hover:decoration-blue-600">
               Contacter le support IT
             </a>
           </p>

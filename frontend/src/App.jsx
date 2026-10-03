@@ -8,6 +8,9 @@ import Leave from "./pages/Leave";
 import ProtectedRoute from "../src/ProtectedRoute";
 import Layout from "../src/Components/Layout";
 import Absences from "./pages/Absences";
+import ActivateAccount from "./pages/ActivateAccount";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const Departments = () => <div className="p-4 bg-white rounded-xl">Page Departments</div>;
 const Contracts = () => <div className="p-4 bg-white rounded-xl">Page Contracts</div>;
@@ -26,16 +29,16 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/activate/:token" element={<ActivateAccount />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-        {/* Routes Protégées Tout Utilisateur */}
+        {/* Routes Protégées Tout Utilisateur (Collaborateurs & Admin) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaves" element={<Leave/>} />
             <Route path="/absences" element={<Absences />} />
-            <Route path="/contracts" element={<Contracts />} />
-            <Route path="/evaluations" element={<Evaluations />} />
-            <Route path="/documents" element={<Documents />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
@@ -45,6 +48,9 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/employees" element={<Employees />} />
             <Route path="/departments" element={<Departments />} />
+            <Route path="/contracts" element={<Contracts />} />
+            <Route path="/evaluations" element={<Evaluations />} />
+            <Route path="/documents" element={<Documents />} />
           </Route>
         </Route>
 

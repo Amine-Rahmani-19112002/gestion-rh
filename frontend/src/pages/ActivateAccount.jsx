@@ -1,0 +1,324 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { 
+  Lock, Eye, EyeOff, ShieldCheck, CheckCircle2, XCircle, 
+  ArrowRight, AlertTriangle, KeyRound 
+} from "lucide-react";
+import api from "../api/axios";
+
+function ActivateAccount() {
+  const { token } = useParams();
+  const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
+  const [tokenError, setTokenError] = useState("");
+  const [userData, setUserData] = useState({ name: "", email: "" });
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  // Vérification de la validité du token au chargement
+  useEffect(() => {
+    const verifyToken = async () => {
+      try {
+        const response = await api.get(`/auth/activate/${token}`);
+        if (response.data.valid) {
+          setTokenValid(true);
+          setUserData({
+            name: response.data.name,
+            email: response.data.email,
+          });
+        }
+      } catch (err) {
+        setTokenValid(false);
+        setTokenError(
+          err.response?.data?.message || 
+          "Ce lien d'activation est invalide ou a expiré. Veuillez contacter votre administrateur RH."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (token) {
+      verifyToken();
+    } else {
+      setLoading(false);
+      setTokenValid(false);
+      setTokenError("Jeton d'activation manquant dans l'adresse URL.");
+    }
+  }, [token]);
+
+  // Critères de robustesse du mot de passe
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+
+  const isPasswordValid = 
+    hasMinLength && 
+    hasUppercase && 
+    hasLowercase && 
+    hasNumber && 
+    passwordsMatch;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError("");
+
+    if (!isPasswordValid) {
+      setSubmitError("Veuillez respecter tous les critères de sécurité du mot de passe.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await api.post(`/auth/activate/${token}`, { password });
+      
+      // Sauvegarde du token et de l'utilisateur pour connexion automatique
+      if (response.data.token && response.data.user) {
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+      }
+
+      setIsSuccess(true);
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 3000);
+    } catch (err) {
+      setSubmitError(
+        err.response?.data?.message || 
+        "Une erreur est survenue lors de l'activation de votre compte."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4 sm:p-6 font-sans antialiased relative overflow-hidden">
+      
+      {/* Background radial glows */}
+      <div className="absolute top-[-15%] right-[-10%] w-[550px] h-[550px] bg-blue-100/50 rounded-full blur-[110px] pointer-events-none -z-10"></div>
+      <div className="absolute bottom-[-15%] left-[-10%] w-[550px] h-[550px] bg-indigo-100/40 rounded-full blur-[110px] pointer-events-none -z-10"></div>
+
+      <div className="w-full max-w-lg">
+        
+        {/* Brand Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-tr from-blue-600 to-cyan-500 rounded-2xl shadow-xl shadow-blue-500/20 text-white font-extrabold text-2xl mb-4">
+            S
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+            Stratox<span className="text-blue-600">HR</span>
+          </h1>
+          <p className="text-sm font-semibold text-slate-500 mt-1 uppercase tracking-wider">
+            Portail Collaborateur Sécurisé
+          </p>
+        </div>
+
+        {/* Card Container */}
+        <div className="bg-white/80 backdrop-blur-2xl border border-white/60 p-8 sm:p-10 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.07)]">
+          
+          {loading ? (
+            <div className="py-12 text-center space-y-4">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-slate-600 font-semibold text-sm">
+                Vérification sécurisée de votre lien d'invitation...
+              </p>
+            </div>
+          ) : !tokenValid ? (
+            <div className="text-center py-6 space-y-4">
+              <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <XCircle className="w-9 h-9" />
+              </div>
+              <h2 className="text-2xl font-extrabold text-slate-900">
+                Lien invalide ou expiré
+              </h2>
+              <p className="text-slate-600 text-sm leading-relaxed max-w-sm mx-auto">
+                {tokenError}
+              </p>
+              <div className="pt-4">
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm rounded-xl transition-all shadow-md"
+                >
+                  Retour à la page de connexion
+                </Link>
+              </div>
+            </div>
+          ) : isSuccess ? (
+            <div className="text-center py-8 space-y-4 animate-fade-in-up">
+              <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                <CheckCircle2 className="w-12 h-12" />
+              </div>
+              <h2 className="text-2xl font-extrabold text-slate-900">
+                Compte activé avec succès !
+              </h2>
+              <p className="text-slate-600 text-sm leading-relaxed max-w-sm mx-auto">
+                Bienvenue parmi nous, <strong>{userData.name}</strong> ! Votre mot de passe personnalisé est maintenant enregistré en toute sécurité.
+              </p>
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-800 font-medium">
+                Vous allez être redirigé automatiquement vers votre tableau de bord dans quelques secondes...
+              </div>
+              <div className="pt-2">
+                <button
+                  onClick={() => navigate("/dashboard")}
+                  className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-emerald-600/20"
+                >
+                  Accéder directement à mon espace
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="mb-6">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-3 border border-blue-100">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Activation de compte & Zero Knowledge
+                </div>
+                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                  Bonjour {userData.name} 👋
+                </h2>
+                <p className="text-slate-500 text-sm mt-1">
+                  Définissez votre mot de passe pour finaliser l'activation de votre compte lié à{" "}
+                  <strong className="text-slate-700">{userData.email}</strong>.
+                </p>
+              </div>
+
+              {submitError && (
+                <div className="mb-5 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                
+                {/* Nouveau Mot de Passe */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Nouveau mot de passe
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <Lock className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="••••••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirmer le Mot de Passe */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Confirmez votre mot de passe
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                      <KeyRound className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      placeholder="••••••••••••"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Checklist Exigences de sécurité */}
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2 text-xs">
+                  <p className="font-bold text-slate-700 mb-2">Exigences de sécurité :</p>
+                  
+                  <div className={`flex items-center gap-2 ${hasMinLength ? "text-emerald-600 font-semibold" : "text-slate-400"}`}>
+                    {hasMinLength ? <CheckCircle2 className="w-3.5 h-3.5" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-300"></div>}
+                    <span>Au moins 8 caractères</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${hasUppercase ? "text-emerald-600 font-semibold" : "text-slate-400"}`}>
+                    {hasUppercase ? <CheckCircle2 className="w-3.5 h-3.5" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-300"></div>}
+                    <span>Au moins une lettre majuscule (A-Z)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${hasLowercase ? "text-emerald-600 font-semibold" : "text-slate-400"}`}>
+                    {hasLowercase ? <CheckCircle2 className="w-3.5 h-3.5" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-300"></div>}
+                    <span>Au moins une lettre minuscule (a-z)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${hasNumber ? "text-emerald-600 font-semibold" : "text-slate-400"}`}>
+                    {hasNumber ? <CheckCircle2 className="w-3.5 h-3.5" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-300"></div>}
+                    <span>Au moins un chiffre (0-9)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${passwordsMatch ? "text-emerald-600 font-semibold" : "text-slate-400"}`}>
+                    {passwordsMatch ? <CheckCircle2 className="w-3.5 h-3.5" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-300"></div>}
+                    <span>Les mots de passe correspondent</span>
+                  </div>
+                </div>
+
+                {/* Bouton de validation */}
+                <button
+                  type="submit"
+                  disabled={!isPasswordValid || submitting}
+                  className={`w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl font-bold text-white transition-all shadow-md ${
+                    isPasswordValid && !submitting
+                      ? "bg-blue-600 hover:bg-blue-700 shadow-blue-500/25 hover:-translate-y-0.5 cursor-pointer"
+                      : "bg-slate-300 cursor-not-allowed shadow-none"
+                  }`}
+                >
+                  {submitting ? (
+                    <span>Activation en cours...</span>
+                  ) : (
+                    <>
+                      <span>Activer mon compte & Accéder à l'espace</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+          )}
+
+        </div>
+
+        <p className="mt-6 text-center text-xs text-slate-400">
+          StratoxHR © {new Date().getFullYear()} — Solution RH Entreprise & Zéro Connaissance
+        </p>
+
+      </div>
+    </div>
+  );
+}
+
+export default ActivateAccount;

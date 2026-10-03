@@ -42,9 +42,6 @@ export default function Home() {
             <a href="/login" className="text-sm font-bold text-slate-600 hover:text-blue-600 transition-colors">
               SE CONNECTER
             </a>
-            <a href="/register" className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/20 transition-all active:scale-95">
-              DÉMARRER
-            </a>
           </div>
         </nav>
       </header>

@@ -17,6 +17,9 @@ export default function Topbar({ profile, onLogout, onOpenSidebar }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const currentRole = (profile?.role || "").toLowerCase().trim();
+  const isEmployee = currentRole === "employe" || currentRole === "employee";
+
   return (
     <header className="h-20 border-b border-slate-200/60 px-4 sm:px-8 flex items-center justify-between gap-4 shrink-0 bg-[#F8FAFC]">
       <div className="flex items-center gap-3 flex-1 max-w-md">
@@ -39,6 +42,27 @@ export default function Topbar({ profile, onLogout, onOpenSidebar }) {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
+        {/* Accès direct Gmail pour les collaborateurs */}
+        {isEmployee && (
+          <a
+            href="https://mail.google.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 rounded-xl text-slate-700 hover:text-red-600 bg-white hover:bg-red-50 border border-slate-200/80 hover:border-red-200 transition-all flex items-center gap-2 shadow-sm group cursor-pointer"
+            title="Ouvrir l'application Gmail"
+          >
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+              <path d="M2 6C2 4.89543 2.89543 4 4 4H7V13.5L2 9.5V6Z" fill="#4285F4"/>
+              <path d="M17 4H20C21.1046 4 22 4.89543 22 6V9.5L17 13.5V4Z" fill="#34A853"/>
+              <path d="M2 9.5L12 17L22 9.5V18C22 19.1046 21.1046 20 20 20H4C2.89543 20 2 19.1046 2 18V9.5Z" fill="#EA4335"/>
+              <path d="M7 4L12 8L17 4H7Z" fill="#FBBC05"/>
+            </svg>
+            <span className="text-xs font-bold group-hover:text-red-600 hidden sm:inline">
+              Gmail
+            </span>
+          </a>
+        )}
+
         <button className="p-2 rounded-xl text-slate-500 hover:bg-slate-200/50 relative transition-all">
           <Bell className="w-5 h-5" />
           <span className="w-2 h-2 bg-blue-600 rounded-full absolute top-2 right-2"></span>

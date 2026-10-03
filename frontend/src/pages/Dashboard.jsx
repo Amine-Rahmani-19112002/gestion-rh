@@ -72,14 +72,304 @@ function Dashboard() {
 
   let cumulativePercent = 0;
 
+  const isEmployee = stats?.isEmployee || profile?.role === "employe";
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "--:--";
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? "--:--" : d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("fr-FR");
+  };
+
+  // =========================================================================
+  // VUE TABLEAU DE BORD COLLABORATEUR (EMPLOYÉ)
+  // =========================================================================
+  if (isEmployee) {
+    const currentStatus = stats?.cards?.currentStatus || "Non pointé";
+
+    return (
+      <div className="space-y-6 max-w-[1500px]">
+        {/* HEADER COLLABORATEUR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                Espace Collaborateur
+              </span>
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Bonjour, {profile?.name || "Collaborateur"} 👋
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Bienvenue sur votre espace personnel. Retrouvez ici le suivi de vos présences, pointages et congés.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-blue-600" : ""}`} />
+              <span>{refreshing ? "Mise à jour..." : "Actualiser"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 CARTES KPI PERSONNELLES */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* CARTE 1 : MON STATUT AUJOURD'HUI */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-slate-800">Mon statut<br/>aujourd'hui</h3>
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                <Clock className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mb-4">
+              <span className="text-xl font-extrabold text-slate-900 block truncate">
+                {currentStatus}
+              </span>
+              <p className="text-xs text-slate-500 mt-1">
+                {stats?.cards?.clockInTime
+                  ? `Pointé à ${formatTime(stats.cards.clockInTime)}`
+                  : "Pas encore pointé ce matin"}
+              </p>
+            </div>
+            <div className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Badgeuse active dans la barre latérale
+            </div>
+          </div>
+
+          {/* CARTE 2 : MES CONGÉS EN ATTENTE */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-slate-800">Congés en attente<br/>de validation</h3>
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                <CalendarX className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-3xl font-extrabold text-slate-900">
+                {stats?.cards?.pendingLeaves ?? 0}
+              </span>
+              <span className="text-xs text-slate-500 font-medium">demande(s)</span>
+            </div>
+            <Link
+              to="/leaves"
+              className="text-xs font-bold text-blue-600 hover:underline flex items-center justify-between"
+            >
+              <span>Suivre mes demandes</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* CARTE 3 : MES CONGÉS VALIDÉS */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-slate-800">Congés validés<br/>par les RH</h3>
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="flex items-baseline gap-2 mb-4">
+              <span className="text-3xl font-extrabold text-slate-900">
+                {stats?.cards?.approvedLeaves ?? 0}
+              </span>
+              <span className="text-xs text-slate-500 font-medium">approuvé(s)</span>
+            </div>
+            <Link
+              to="/leaves"
+              className="text-xs font-bold text-emerald-600 hover:underline flex items-center justify-between"
+            >
+              <span>Poser un nouveau congé</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* CARTE 4 : MON BILAN DU MOIS */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-bold text-slate-800">Mon bilan présence<br/>ce mois</h3>
+              <div className="p-2 bg-slate-100 text-slate-600 rounded-xl">
+                <Laptop className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center mb-3">
+              <div className="bg-slate-50 p-1.5 rounded-lg">
+                <span className="block text-sm font-bold text-slate-800">{stats?.cards?.delaysThisMonth ?? 0}</span>
+                <span className="text-[9px] uppercase font-bold text-slate-400">Retards</span>
+              </div>
+              <div className="bg-slate-50 p-1.5 rounded-lg">
+                <span className="block text-sm font-bold text-slate-800">{stats?.cards?.absencesThisMonth ?? 0}</span>
+                <span className="text-[9px] uppercase font-bold text-slate-400">Absences</span>
+              </div>
+              <div className="bg-slate-50 p-1.5 rounded-lg">
+                <span className="block text-sm font-bold text-emerald-600">{stats?.cards?.teleworkThisMonth ?? 0}</span>
+                <span className="text-[9px] uppercase font-bold text-slate-400">Télétravail</span>
+              </div>
+            </div>
+            <Link
+              to="/absences"
+              className="text-xs font-bold text-slate-700 hover:text-blue-600 hover:underline flex items-center justify-between"
+            >
+              <span>Voir mes signalements</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* CONTENU PRINCIPAL COLLABORATEUR : 2 COLONNES */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* COLONNE GAUCHE (2/3) : MES DERNIÈRES DEMANDES DE CONGÉ */}
+          <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Mes Demandes de Congé Récentes</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Historique de vos congés soumis et leur état de traitement</p>
+              </div>
+              <Link
+                to="/leaves"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:underline"
+              >
+                <span>Nouvelle demande</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {stats?.myRecentLeaves && stats.myRecentLeaves.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
+                      <th className="py-2.5">Type de congé</th>
+                      <th className="py-2.5">Période</th>
+                      <th className="py-2.5">Durée</th>
+                      <th className="py-2.5">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {stats.myRecentLeaves.map((leave, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 font-bold text-slate-900">{leave.typeConge}</td>
+                        <td className="py-3">
+                          {formatDate(leave.dateDebut)} → {formatDate(leave.dateFin)}
+                        </td>
+                        <td className="py-3">{leave.nombreJours} jour(s)</td>
+                        <td className="py-3">
+                          {leave.statut === "Approuvé" && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3" /> Approuvé
+                            </span>
+                          )}
+                          {leave.statut === "En attente" && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                              <Clock className="w-3 h-3" /> En attente
+                            </span>
+                          )}
+                          {leave.statut === "Refusé" && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                              <AlertTriangle className="w-3 h-3" /> Refusé
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-12 text-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200">
+                <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-700">Aucune demande de congé récente</p>
+                <p className="text-[11px] text-slate-400 mt-1">Vous n'avez pas encore déposé de demande.</p>
+                <Link
+                  to="/leaves"
+                  className="mt-3 inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
+                >
+                  Poser une demande
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* COLONNE DROITE (1/3) : RACCOURCIS & DERNIERS SIGNALEMENTS */}
+          <div className="space-y-6">
+            {/* DERNIERS SIGNALEMENTS */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-slate-900">Mes Signalements Récents</h3>
+                <Link to="/absences" className="text-xs font-bold text-blue-600 hover:underline">
+                  Voir tout
+                </Link>
+              </div>
+
+              {stats?.myRecentAbsences && stats.myRecentAbsences.length > 0 ? (
+                <div className="space-y-3">
+                  {stats.myRecentAbsences.map((abs, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-900">{abs.type}</span>
+                        <span className="text-[10px] text-slate-400">{formatDate(abs.date)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-500 truncate max-w-[140px]">{abs.motif || "Sans motif"}</span>
+                        {abs.justifiee ? (
+                          <span className="text-emerald-600 font-bold">Justifiée</span>
+                        ) : (
+                          <span className="text-amber-600 font-bold">À justifier</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-slate-400 text-xs">
+                  Aucun retard ou absence enregistré ce mois.
+                </div>
+              )}
+            </div>
+
+            {/* RACCOURCIS RAPIDES */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm space-y-3">
+              <h3 className="text-base font-bold text-slate-900 mb-2">Actions Rapides</h3>
+              <Link
+                to="/leaves"
+                className="w-full p-3 bg-blue-50/60 hover:bg-blue-100/60 border border-blue-100 rounded-xl flex items-center justify-between text-xs font-bold text-blue-900 transition-all"
+              >
+                <span>Faire une demande de congé</span>
+                <ArrowRight className="w-4 h-4 text-blue-600" />
+              </Link>
+              <Link
+                to="/absences"
+                className="w-full p-3 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl flex items-center justify-between text-xs font-bold text-slate-700 transition-all"
+              >
+                <span>Consulter mes justificatifs</span>
+                <ArrowRight className="w-4 h-4 text-slate-400" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VUE TABLEAU DE BORD ADMINISTRATEUR (VUE GLOBALE ENTREPRISE RH)
+  // =========================================================================
   return (
     <div className="space-y-6 max-w-[1500px]">
-      
       {/* HEADER AVEC TITRE ET BOUTON RAFRAÎCHIR */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Bonjour, {profile?.name || "Collaborateur"} 👋
+            Bonjour, {profile?.name || "Administrateur"} 👋
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Voici un aperçu en temps réel de l'activité RH et de la présence aujourd'hui.
@@ -100,7 +390,6 @@ function Dashboard() {
 
       {/* ROW 1: KPI CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        
         {/* CARTE 1 : TAUX DE PRÉSENCE */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">

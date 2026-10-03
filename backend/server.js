@@ -10,7 +10,8 @@ const leaveRoutes = require("./routes/leaveRoutes");
 const absenceRoutes = require("./routes/absenceRoutes");
 const pointageRoutes = require("./routes/pointageRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
-
+const departmentRoutes = require("./routes/departmentRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express(); 
 
@@ -29,7 +30,8 @@ app.use("/api/leaves", leaveRoutes);
 app.use("/api/absences", absenceRoutes);
 app.use("/api/pointage", pointageRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-
+app.use("/api/departments", departmentRoutes);
+app.use("/api/users", userRoutes);
 // 3. Connexion BDD et Lancement du serveur
 const PORT = process.env.PORT || 5000;
 

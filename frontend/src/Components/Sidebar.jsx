@@ -8,7 +8,7 @@ import {
 import api from "../api/axios";
 import useIdleTimeout from "../hooks/useIdleTimeout";
 
-const navItems = [
+const adminNavItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { label: "Employees", path: "/employees", icon: Users },
   { label: "Leave", path: "/leaves", icon: CalendarX },
@@ -18,7 +18,14 @@ const navItems = [
   { label: "Evaluations", path: "/evaluations", icon: Award },
   { label: "Documents", path: "/documents", icon: Folder },
   { label: "Settings", path: "/settings", icon: Settings },
-  
+];
+
+const employeeNavItems = [
+  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { label: "Leave", path: "/leaves", icon: CalendarX },
+  { label: "Delays & Absences", path: "/absences", icon: CalendarX },
+  { label: "Gmail", path: "https://mail.google.com/", isExternal: true },
+  { label: "Settings", path: "/settings", icon: Settings },
 ];
 
 // Couleurs selon le statut du pointage
@@ -30,8 +37,16 @@ const statusConfig = {
   "Anomalie": { color: "text-rose-600", bg: "bg-rose-50", dot: "bg-rose-500", label: "Anomalie" },
 };
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, user: propUser }) {
   const location = useLocation();
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUser = propUser || storedUser;
+  const currentRole = (currentUser?.role || storedUser?.role || "").toLowerCase().trim();
+  const isAdmin = currentRole === "admin";
+
+  // Navigation adaptée : l'employé ne voit QUE ses rubriques (Employees et Departments sont strictement exclus)
+  const visibleNavItems = isAdmin ? adminNavItems : employeeNavItems;
+
   const [pointage, setPointage] = useState(null);
   const [loadingPointage, setLoadingPointage] = useState(false);
   const [geoError, setGeoError] = useState(null);
@@ -191,9 +206,37 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
 
           <nav className="space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
+
+              if (item.isExternal) {
+                return (
+                  <a
+                    key={item.label}
+                    href={item.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={onClose}
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium transition-all text-sm text-slate-600 hover:bg-red-50 hover:text-red-600 group"
+                    title="Ouvrir l'application Gmail"
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none">
+                        <path d="M2 6C2 4.89543 2.89543 4 4 4H7V13.5L2 9.5V6Z" fill="#4285F4"/>
+                        <path d="M17 4H20C21.1046 4 22 4.89543 22 6V9.5L17 13.5V4Z" fill="#34A853"/>
+                        <path d="M2 9.5L12 17L22 9.5V18C22 19.1046 21.1046 20 20 20H4C2.89543 20 2 19.1046 2 18V9.5Z" fill="#EA4335"/>
+                        <path d="M7 4L12 8L17 4H7Z" fill="#FBBC05"/>
+                      </svg>
+                      <span>{item.label}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-red-500">
+                      ↗
+                    </span>
+                  </a>
+                );
+              }
+
               return (
                 <Link
                   key={item.path}

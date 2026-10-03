@@ -9,7 +9,13 @@ const createAdmin = async () => {
       email: "admin@rh.com",
     });
     if (existingAdmin) {
-      console.log("L'administrateur existe déjà");
+      if (existingAdmin.status !== "active") {
+        existingAdmin.status = "active";
+        await existingAdmin.save();
+        console.log("Statut administrateur mis à jour à 'active'");
+      } else {
+        console.log("L'administrateur existe déjà et est actif");
+      }
       return;
     }
     await User.create({
@@ -17,6 +23,7 @@ const createAdmin = async () => {
       email: "admin@rh.com",
       password: "anwer123",
       role: "admin",
+      status: "active",
     });
     console.log("Administrateur créé avec succès");
   } catch (error) {

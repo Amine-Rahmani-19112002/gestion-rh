@@ -8,6 +8,7 @@ export default function Layout() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export default function Layout() {
       try {
         const response = await api.get("/auth/profile");
         setProfile(response.data);
+        localStorage.setItem("user", JSON.stringify(response.data));
       } catch (err) {
         console.error("Erreur de chargement du profil", err);
       } finally {
@@ -39,10 +41,11 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] font-sans text-slate-800 antialiased overflow-hidden">
+    <div className="flex h-screen bg-[#F8FAFC] font-sans text-slate-800 antialiased overflow-hidden relative">
       <Sidebar 
         isOpen={sidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
+        user={profile}
       />
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
