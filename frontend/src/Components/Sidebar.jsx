@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, Users, Building2, CalendarX, FileText, 
   Award, Folder, Settings, X, Fingerprint, LogOut, MapPin, Wifi, 
-  AlertTriangle, CheckCircle, Clock
+  AlertTriangle, CheckCircle, Clock, Briefcase, Lightbulb
 } from "lucide-react";
 import api from "../api/axios";
 import useIdleTimeout from "../hooks/useIdleTimeout";
@@ -11,19 +11,22 @@ import useIdleTimeout from "../hooks/useIdleTimeout";
 const adminNavItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { label: "Employees", path: "/employees", icon: Users },
+  { label: "Positions", path: "/positions", icon: Briefcase },
   { label: "Leave", path: "/leaves", icon: CalendarX },
-  { label: "Delays & Absences", path: "/absences", icon: CalendarX },
+  { label: "Delays & Absences", path: "/absences", icon: Clock },
   { label: "Departments", path: "/departments", icon: Building2 },
   { label: "Contracts", path: "/contracts", icon: FileText },
   { label: "Evaluations", path: "/evaluations", icon: Award },
   { label: "Documents", path: "/documents", icon: Folder },
+  { label: "Boîte à Idées", path: "/suggestions", icon: Lightbulb },
   { label: "Settings", path: "/settings", icon: Settings },
 ];
 
 const employeeNavItems = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { label: "Leave", path: "/leaves", icon: CalendarX },
-  { label: "Delays & Absences", path: "/absences", icon: CalendarX },
+  { label: "Delays & Absences", path: "/absences", icon: Clock },
+  { label: "Boîte à Idées", path: "/suggestions", icon: Lightbulb },
   { label: "Gmail", path: "https://mail.google.com/", isExternal: true },
   { label: "Settings", path: "/settings", icon: Settings },
 ];

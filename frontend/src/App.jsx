@@ -11,12 +11,13 @@ import Absences from "./pages/Absences";
 import ActivateAccount from "./pages/ActivateAccount";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-
-const Departments = () => <div className="p-4 bg-white rounded-xl">Page Departments</div>;
-const Contracts = () => <div className="p-4 bg-white rounded-xl">Page Contracts</div>;
-const Evaluations = () => <div className="p-4 bg-white rounded-xl">Page Evaluations</div>;
-const Documents = () => <div className="p-4 bg-white rounded-xl">Page Documents</div>;
-const Settings = () => <div className="p-4 bg-white rounded-xl">Page Settings</div>;
+import Suggestions from "./pages/Suggestions";
+import Contracts from "./pages/Contracts";
+import Documents from "./pages/Documents";
+import Settings from "./pages/Settings";
+import Positions from "./pages/Positions";
+import Departments from "./pages/Departments";
+import Evaluations from "./pages/Evaluations";
 
 
 function App() {
@@ -39,6 +40,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaves" element={<Leave/>} />
             <Route path="/absences" element={<Absences />} />
+            <Route path="/suggestions" element={<Suggestions />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Route>
@@ -48,6 +50,7 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/employees" element={<Employees />} />
             <Route path="/departments" element={<Departments />} />
+            <Route path="/positions" element={<Positions />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/evaluations" element={<Evaluations />} />
             <Route path="/documents" element={<Documents />} />
