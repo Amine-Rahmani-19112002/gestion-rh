@@ -4,14 +4,18 @@ const {
   clockIn, 
   clockOut, 
   updateStatus, 
-  getMyPointage 
+  getMyPointage,
+  getMyPointageHistory,
+  getAllPointages
 } = require("../controllers/pointageController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 // Routes privées (nécessitent d'être authentifié)
 router.post("/clock-in", protect, clockIn);
 router.post("/clock-out", protect, clockOut);
 router.post("/status", protect, updateStatus);
 router.get("/me", protect, getMyPointage);
+router.get("/history", protect, getMyPointageHistory);
+router.get("/all", protect, adminOnly, getAllPointages);
 
 module.exports = router;

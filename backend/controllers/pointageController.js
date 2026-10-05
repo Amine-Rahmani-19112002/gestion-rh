@@ -194,3 +194,62 @@ exports.getMyPointage = async (req, res) => {
     res.status(500).json({ message: "Erreur serveur." });
   }
 };
+
+exports.getMyPointageHistory = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+    const filter = { user: req.user._id };
+    
+    if (month && year) {
+      const startDate = new Date(year, month - 1, 1);
+      const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+      filter.date = { $gte: startDate, $lte: endDate };
+    }
+    
+    const pointages = await Pointage.find(filter)
+      .sort({ date: -1 })
+      .limit(60);
+    
+    // Calculate stats
+    const totalDays = pointages.length;
+    const lateCount = pointages.filter(p => {
+      if (!p.clockInTime) return false;
+      const clockIn = new Date(p.clockInTime);
+      return clockIn.getHours() > 9 || (clockIn.getHours() === 9 && clockIn.getMinutes() > 0);
+    }).length;
+    const anomalies = pointages.filter(p => p.status === 'Anomalie').length;
+    const avgHours = pointages.reduce((acc, p) => {
+      if (p.clockInTime && p.clockOutTime) {
+        const diff = new Date(p.clockOutTime) - new Date(p.clockInTime);
+        return acc + diff / (1000 * 60 * 60);
+      }
+      return acc;
+    }, 0) / (totalDays || 1);
+    
+    res.status(200).json({
+      pointages,
+      stats: {
+        totalDays,
+        lateCount,
+        anomalies,
+        avgHours: Math.round(avgHours * 10) / 10,
+        onTimeRate: totalDays > 0 ? Math.round(((totalDays - lateCount) / totalDays) * 100) : 100
+      }
+    });
+  } catch (error) {
+    console.error('Erreur getMyPointageHistory:', error);
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+};
+
+exports.getAllPointages = async (req, res) => {
+  try {
+    const pointages = await Pointage.find()
+      .populate('user', 'name email role')
+      .sort({ date: -1 })
+      .limit(200);
+    res.status(200).json(pointages);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur serveur.' });
+  }
+};
